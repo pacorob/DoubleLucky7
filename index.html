@@ -1,29 +1,165 @@
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080d18"><title>Double Lucky 7 Online</title>
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080d18">
+<title>Double Lucky 7 — Solo</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(#18253b,#080d18 48%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.app{max-width:780px;margin:auto;padding:18px 14px 28px}.panel{background:#111a2aee;border:1px solid #ffffff0d;border-radius:22px;padding:16px;margin:11px 0;box-shadow:0 12px 32px #0005}h1{font-size:29px;margin:0}h2{margin:2px 0 10px}.muted{color:#9eabbf}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}input,button{font:inherit;border:0;border-radius:14px;padding:12px}input{width:100%;background:#eef1f6;color:#111}button{font-weight:800;background:#f4f6fb;color:#111}button.dark{background:#29364b;color:#fff}button.gold{background:#f5c542}.hidden{display:none}.players{display:grid;gap:7px}.p{padding:10px;background:#1d293c;border-radius:12px;display:flex;justify-content:space-between}.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px}.score{background:#1d293c;border-radius:13px;padding:9px}.score b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score strong{font-size:23px}.pill{display:inline-block;background:#29364b;padding:5px 9px;border-radius:99px;margin:3px}.bidgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.bidgrid button{background:#29364b;color:#fff}.table{min-height:160px;background:#10283a;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;padding:14px}.pcard{width:57px;height:79px;background:#fff;color:#111;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:18px}.small{font-size:10px;font-weight:600}.hand{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;padding-top:12px}.hand button{width:57px;height:82px;padding:2px;font-size:16px;box-shadow:0 5px 12px #0006}.hand button:active{transform:translateY(-6px)}.red{color:#d22}.notice{background:#1d293c;padding:10px;border-radius:12px;font-size:13px}
-</style></head><body><main class="app">
-<section class="panel"><h1>DOUBLE LUCKY 7</h1><div class="muted">Online · speel met vrienden</div></section>
-<section id="home" class="panel"><h2>Spelen</h2><input id="name" placeholder="Jouw naam"><div class="row" style="margin-top:8px"><button class="gold" onclick="create()">Kamer maken</button><button class="dark" onclick="toggleJoin()">Kamer joinen</button></div><div id="join" class="hidden" style="margin-top:9px"><input id="code" placeholder="4-cijferige code" maxlength="4"><button style="margin-top:7px" onclick="join()">Join</button></div></section>
-<section id="lobby" class="panel hidden"><h2>Kamer <span id="rc"></span></h2><div id="lp" class="players"></div><p class="muted">Deel deze code met je vrienden.</p><button class="gold" onclick="start()">Start spel</button></section>
-<section id="game" class="hidden"><div id="info" class="panel"></div><div id="scores" class="panel"></div><div id="play" class="panel"></div></section>
-</main><script>
-let room="",id="",state=null,hand=[],es=null;
-const $=id=>document.getElementById(id),S=["♠","♥","♦","♣"];
-async function api(url,opt){let r=await fetch(url,opt),j=await r.json();if(!r.ok)throw Error(j.error||"Fout");return j}
-function err(e){alert(e.message)}
-function toggleJoin(){$("join").classList.toggle("hidden")}
-async function create(){try{room=(await api("/create")).code;await joinRoom($("name").value||"Speler")}catch(e){err(e)}}
-async function join(){try{room=$("code").value.toUpperCase();await joinRoom($("name").value||"Speler")}catch(e){err(e)}}
-async function joinRoom(name){let j=await api(`/join?code=${room}&name=${encodeURIComponent(name)}`);id=j.id;state=j.state;connect();render()}
-function connect(){es?.close();es=new EventSource(`/events?code=${room}&id=${id}`);es.onmessage=e=>{let x=JSON.parse(e.data);if(x.type==="state"){state=x.state;render()}if(x.type==="hand"){hand=x.hand;render()}}}
-function render(){if(!state)return;$("home").classList.add("hidden");if(!state.started){$("lobby").classList.remove("hidden");$("game").classList.add("hidden");$("rc").textContent=room;$("lp").innerHTML=state.players.map(p=>`<div class=p>${p.name}<span>${p.connected?"🟢":"⚪"}</span></div>`).join("");return}$("lobby").classList.add("hidden");$("game").classList.remove("hidden");
-$("info").innerHTML=`<h2>Ronde ${state.round}/14</h2><div>${state.cards} kaart${state.cards==1?"":"en"} · dealer ${state.players[state.dealer].name}</div><span class=pill>${state.trump?"Troef "+S[state.trump.s]+" "+state.trump.v:"Geen troef"}</span>${state.round===7?'<span class=pill>★ Double Lucky 7</span>':''}`;
-$("scores").innerHTML='<div class=scores>'+state.players.map((p,i)=>`<div class=score><b>${p.name}</b><strong>${p.score}</strong><div class=muted>inzet ${state.bids[i]??"—"} · ${state.won[i]} slagen</div></div>`).join("")+'</div>';
-let me=state.players.findIndex(p=>p.id===id),mine=me===state.turn;
-if(state.finished){$("play").innerHTML="<h2>Spel afgelopen 🎉</h2>"+[...state.players].sort((a,b)=>b.score-a.score).map(p=>`<p>${p.name}: <b>${p.score}</b></p>`).join("");return}
-if(state.phase==="bid"){ $("play").innerHTML=mine?`<h2>Jouw inzet</h2><div class=bidgrid>${Array.from({length:state.cards+1},(_,i)=>`<button onclick="act('bid',${i})">${i}</button>`).join("")}</div>`:`<h2>${state.players[state.turn].name} kiest een inzet…</h2>`;return}
-$("play").innerHTML=`<h2>${mine?"Jouw beurt":state.players[state.turn].name+" is aan de beurt"}</h2><div class=table>${state.trick.length?state.trick.map(x=>`<div class="pcard ${x.c.s===1||x.c.s===2?'red':''}">${x.c.joker?"★":S[x.c.s]+" "+x.c.v}<span class=small>${state.players[x.p].name}</span></div>`).join(""):"<span class=muted>Nieuwe slag</span>"}</div>${mine?`<div class=hand>${hand.map((c,i)=>`<button class="${c.s===1||c.s===2?'red':''}" onclick="act('play',${i})">${c.joker?"★":S[c.s]+" "+c.v}</button>`).join("")}</div>`:"<div class=notice>Wacht tot je aan de beurt bent…</div>"}`;
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(#18253b,#080d18 48%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{max-width:780px;margin:auto;padding:18px 14px 35px}.panel{background:#111a2aee;border:1px solid #ffffff13;border-radius:22px;padding:16px;margin:11px 0;box-shadow:0 12px 32px #0005}h1{font-size:29px;margin:0}h2{margin:2px 0 10px}.muted{color:#aebbd0}.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}input,button,select{font:inherit;border:0;border-radius:14px;padding:12px}input,select{background:#eef1f6;color:#111;max-width:100%}input{width:100%}button{font-weight:800;background:#f4f6fb;color:#111;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.gold{background:#f5c542}.dark{background:#29364b;color:white}.hidden{display:none!important}.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px}.score{background:#1d293c;border-radius:13px;padding:9px}.score b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score strong{font-size:23px}.pill{display:inline-block;background:#29364b;padding:6px 10px;border-radius:99px;margin:4px}.bidgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(52px,1fr));gap:7px}.bidgrid button{background:#29364b;color:#fff}.table{min-height:126px;background:#10283a;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:14px}.played{text-align:center;font-size:12px;max-width:82px}.played.win .pcard{outline:3px solid #f5c542}.pcard{width:57px;height:78px;background:#fff;color:#111;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:900;font-size:18px;margin:4px auto}.red{color:#d22}.hand{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;padding:12px 0}.hand button{width:57px;height:82px;padding:2px;background:#fff;color:#111;font-size:17px;box-shadow:0 5px 12px #0006}.hand button.red{color:#d22}.hand button:disabled{background:#aaa}.notice{background:#1d293c;padding:10px;border-radius:12px;font-size:14px;line-height:1.5}.actions{margin-top:12px}select{min-width:115px}#message{min-height:24px;color:#f5c542}small{color:#b9c6d9}
+</style>
+</head>
+<body>
+<main class="app">
+<section class="panel"><h1>DOUBLE LUCKY 7</h1><div class="muted">Solo · speel tegen computers · geen server nodig</div></section>
+<section id="home" class="panel">
+<h2>Nieuw spel</h2>
+<label for="name">Jouw naam</label><input id="name" value="Robin" maxlength="20">
+<div class="row actions"><label for="bots">Tegenstanders</label><select id="bots"><option value="1">1 computer</option><option value="2">2 computers</option><option value="3" selected>3 computers</option><option value="4">4 computers</option><option value="5">5 computers</option><option value="6">6 computers</option></select><button class="gold" id="newGame">Start spel</button></div>
+<p class="muted">14 rondes: eerst 1 t/m 7 kaarten, daarna 7 t/m 1. Voorspel hoeveel slagen je wint.</p>
+</section>
+<section id="game" class="hidden">
+<div id="info" class="panel"></div>
+<div id="scores" class="panel"></div>
+<div id="play" class="panel"></div>
+<div id="message" role="status" aria-live="polite"></div>
+<div class="row actions"><button class="dark" id="restart">Nieuw spel</button></div>
+</section>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const symbols = ['♠','♥','♦','♣'];
+const names = ['Alex','Sam','Charlie','Dani','Bo','Max'];
+let game = null, generation = 0, pending = false;
+function escapeHTML(text){return String(text).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function shuffle(array){for(let i=array.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]];}return array;}
+function deck(){return shuffle(Array.from({length:56},(_,i)=>({s:Math.floor(i/14),v:i%14+1})).concat([{joker:true}]));}
+function cardsThisRound(round){return round<7?round+1:14-round;}
+function cardText(c){return c.joker?'🃏':`${symbols[c.s]} ${c.v===1?'A':c.v===11?'J':c.v===12?'Q':c.v===13?'K':'14'}`;}
+function cardHTML(c){return `<div class="pcard ${c.s===1||c.s===2?'red':''}">${cardText(c)}</div>`;}
+function setMessage(text){$('message').textContent=text;}
+function start(){
+ generation++; pending=false;
+ const count=Number($('bots').value);
+ game={players:[($('name').value.trim()||'Speler').slice(0,20),...names.slice(0,count)].map(name=>({name,score:0})),round:0,dealer:0,phase:'',turn:0,hands:[],bids:[],won:[],trick:[],lastTrick:[],trump:null,leader:0};
+ $('home').classList.add('hidden');$('game').classList.remove('hidden');deal();
 }
-async function act(a,v){try{await api("/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:room,id,action:a,...a==="bid"?{value:v}:{index:v}})})}catch(e){err(e)}}
-async function start(){try{await api("/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:room,id})})}catch(e){err(e)}}
-</script></body></html>
+function deal(){
+ const g=game,d=deck(),n=cardsThisRound(g.round),count=g.players.length;
+ g.hands=Array.from({length:count},()=>[]);g.bids=Array(count).fill(null);g.won=Array(count).fill(0);
+ g.trick=[];g.lastTrick=[];
+ for(let k=0;k<n;k++)for(let i=0;i<count;i++)g.hands[i].push(d.pop());
+ g.trump=d.pop();
+ g.phase='bid';g.turn=(g.dealer+1)%count;
+ setMessage('Kies hoeveel slagen je denkt te winnen.');render();scheduleBots();
+}
+function legal(hand,trick,index){
+ const c=hand[index];if(!c)return false;
+ if(!trick.length||c.joker||trick[0].card.joker)return true;
+ const lead=trick[0].card.s;
+ return c.s===lead||!hand.some(x=>!x.joker&&x.s===lead);
+}
+function beats(a,b,lead,trump){
+ if(a.joker)return !b.joker;
+ if(b.joker)return false;
+ if(a.s===b.s)return a.v>b.v;
+ if(a.s===trump.s)return true;
+ if(b.s===trump.s)return false;
+ return a.s===lead.s;
+}
+function winner(trick,trump){
+ let best=trick[0];
+ for(const played of trick.slice(1))if(beats(played.card,best.card,trick[0].card,trump))best=played;
+ return best.player;
+}
+function chooseBid(i){
+ const g=game,n=cardsThisRound(g.round),h=g.hands[i];
+ let strength=h.reduce((v,c)=>v+(c.joker?1.1:c.s===g.trump.s?Math.max(0.25,(c.v-5)/12):Math.max(0,(c.v-9)/14)),0);
+ return Math.max(0,Math.min(n,Math.round(strength+(Math.random()-.5)*.7)));
+}
+function bid(i,value){
+ const g=game;if(!g||g.phase!=='bid'||g.turn!==i||g.bids[i]!==null||!Number.isInteger(value)||value<0||value>cardsThisRound(g.round))return;
+ g.bids[i]=value;
+ if(g.bids.every(x=>x!==null)){g.phase='play';g.turn=(g.dealer+1)%g.players.length;g.leader=g.turn;setMessage('Speel een kaart. Je moet kleur bekennen als je die hebt.');}
+ else g.turn=(i+1)%g.players.length;
+ render();scheduleBots();
+}
+function chooseCard(i){
+ const g=game,hand=g.hands[i],options=hand.map((_,index)=>index).filter(index=>legal(hand,g.trick,index));
+ const target=g.bids[i]-g.won[i];
+ const values=options.map(index=>{
+  const c=hand[index],trick=g.trick,winning=trick.length?winner([...trick,{player:i,card:c}],g.trump)===i:(c.joker||c.s===g.trump.s||c.v>=11);
+  let cost=c.joker?100:c.s===g.trump.s?30+c.v:c.v;
+  return {index,winning,cost};
+ });
+ if(target>0){const win=values.filter(x=>x.winning).sort((a,b)=>a.cost-b.cost);if(win.length&&Math.random()<.78)return win[0].index;}
+ const lose=values.filter(x=>!x.winning).sort((a,b)=>b.cost-a.cost);
+ if(lose.length)return lose[0].index;
+ return values.sort((a,b)=>a.cost-b.cost)[0].index;
+}
+function play(i,index){
+ const g=game;if(!g||g.phase!=='play'||g.turn!==i||!Number.isInteger(index)||!legal(g.hands[i],g.trick,index))return;
+ const card=g.hands[i].splice(index,1)[0];g.trick.push({player:i,card});
+ if(g.trick.length===g.players.length){
+  g.phase='trickEnd';g.lastTrick=g.trick.slice();const w=winner(g.trick,g.trump);g.won[w]++;
+  setMessage(`${g.players[w].name} wint de slag.`);render();
+  const token=generation;setTimeout(()=>{if(token!==generation||!game||game.phase!=='trickEnd')return;
+   game.trick=[];game.lastTrick=[];
+   if(game.hands.every(h=>h.length===0))finishRound();
+   else{game.phase='play';game.turn=w;game.leader=w;render();scheduleBots();}
+  },1250);
+ }else{g.turn=(i+1)%g.players.length;render();scheduleBots();}
+}
+function finishRound(){
+ const g=game,n=g.round;
+ const lines=[];
+ g.players.forEach((p,i)=>{
+  let points=g.won[i]===g.bids[i]?10+2*g.won[i]:0;
+  if(n===6)points*=2;
+  p.score+=points;
+  lines.push(`${p.name}: ${points>0?'+':''}${points}`);
+ });
+ g.phase=n===13?'finished':'roundEnd';
+ setMessage(`Ronde voorbij — ${lines.join(' · ')}`);render();
+}
+function nextRound(){if(!game||game.phase!=='roundEnd')return;game.round++;game.dealer=(game.dealer+1)%game.players.length;deal();}
+function scheduleBots(){
+ if(!game||pending||game.phase!=='bid'&&game.phase!=='play'||game.turn===0)return;
+ pending=true;const token=generation;
+ setTimeout(()=>{pending=false;if(token!==generation||!game||game.turn===0)return;
+  if(game.phase==='bid')bid(game.turn,chooseBid(game.turn));
+  else if(game.phase==='play')play(game.turn,chooseCard(game.turn));
+ },530);
+}
+function render(){
+ const g=game;if(!g)return;
+ const cards=cardsThisRound(g.round);
+ $('info').innerHTML=`<h2>Ronde ${g.round+1} / 14</h2><div>${cards} ${cards===1?'kaart':'kaarten'} · Deler: ${escapeHTML(g.players[g.dealer].name)}</div><span class="pill">Troef: ${cardText(g.trump)}</span>${g.round===6?'<span class="pill">Double Lucky 7 — dubbele punten</span>':''}<div class="muted">Je speelt tegen ${g.players.length-1} ${g.players.length===2?'computer':'computers'}.</div>`;
+ $('scores').innerHTML='<div class="scores">'+g.players.map((p,i)=>`<div class="score"><b>${escapeHTML(p.name)}${i===0?' (jij)':''}</b><strong>${p.score}</strong><div class="muted">Inzet: ${g.bids[i]===null?'—':g.bids[i]} · Slagen: ${g.won[i]}</div></div>`).join('')+'</div>';
+ const area=$('play');
+ if(g.phase==='bid'){
+  area.innerHTML=g.turn===0?`<h2>Jouw inzet</h2><div class="bidgrid">${Array.from({length:cards+1},(_,i)=>`<button data-bid="${i}">${i}</button>`).join('')}</div>`:`<h2>${escapeHTML(g.players[g.turn].name)} kiest een inzet…</h2>`;
+  area.querySelectorAll('[data-bid]').forEach(b=>b.onclick=()=>bid(0,Number(b.dataset.bid)));return;
+ }
+ if(g.phase==='roundEnd'){
+  area.innerHTML='<h2>Ronde afgelopen</h2><p>Precies goed voorspeld? Dan krijg je 10 punten + 2 per gewonnen slag. In ronde 7 dubbele punten.</p><button class="gold" id="next">Volgende ronde</button>';
+  $('next').onclick=nextRound;return;
+ }
+ if(g.phase==='finished'){
+  const ranked=[...g.players].sort((a,b)=>b.score-a.score);
+  area.innerHTML=`<h2>Spel afgelopen</h2><p>Winnaar: ${escapeHTML(ranked[0].name)} met ${ranked[0].score} punten.</p><div class="notice">${ranked.map((p,i)=>`${i+1}. ${escapeHTML(p.name)} — ${p.score} punten`).join('<br>')}</div>`;return;
+ }
+ const current=g.phase==='trickEnd'?g.lastTrick:g.trick;
+ const win=g.phase==='trickEnd'?winner(current,g.trump):-1;
+ let html=`<h2>${g.phase==='trickEnd'?'Slag afgelopen':g.turn===0?'Jouw beurt':`${escapeHTML(g.players[g.turn].name)} is aan de beurt…`}</h2><div class="table">${current.length?current.map(x=>`<div class="played ${x.player===win?'win':''}">${escapeHTML(g.players[x.player].name)}${cardHTML(x.card)}</div>`).join(''):'<span class="muted">Nieuwe slag</span>'}</div>`;
+ if(g.phase==='play'&&g.turn===0){html+=`<div class="hand">${g.hands[0].map((c,i)=>`<button data-card="${i}" class="${c.s===1||c.s===2?'red':''}" ${legal(g.hands[0],g.trick,i)?'':'disabled'} aria-label="Speel ${cardText(c)}">${cardText(c)}</button>`).join('')}</div><div class="notice">Tik op een kaart. Grijze kaarten mag je niet spelen: je moet kleur bekennen.</div>`;}
+ else if(g.phase==='play')html+='<div class="notice">Je kaarten verschijnen weer wanneer je aan de beurt bent.</div>';
+ area.innerHTML=html;
+ area.querySelectorAll('[data-card]').forEach(b=>b.onclick=()=>play(0,Number(b.dataset.card)));
+}
+$('newGame').onclick=start;
+$('restart').onclick=()=>{generation++;game=null;pending=false;$('game').classList.add('hidden');$('home').classList.remove('hidden');};
+</script>
+</body>
+</html>
